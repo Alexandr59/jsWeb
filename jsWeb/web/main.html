@@ -1,0 +1,202 @@
+<html>
+<head>
+    <title>Main task</title>
+    <script src="script/utility.js"></script>
+    <script>
+        function checkInput() {
+            let checkBox = document.getElementsByName("idTask")
+            let checked = false
+            for (let i = 0; i < checkBox.length; i++) {
+                if (checkBox[i].checked) {
+                    checked = true;
+                    break;
+                }
+            }
+            if (!checked) {
+                document.getElementById("errMsg").innerHTML = "No checked tasks"
+                return false;
+            }
+            tasks.submit();
+        }
+
+        function start() {
+            main(getCookie('table'))
+            const userLogin = getCookie('login')
+            if (userLogin) {
+                document.getElementById('login').innerHTML = userLogin
+                document.getElementById('registered').style.display = 'block'
+                document.getElementById('not_registered').style.display = 'none'
+                return;
+            }
+            document.getElementById('registered').style.display = 'none'
+            document.getElementById('not_registered').style.display = 'block'
+        }
+
+        function clear() {
+            let myNode1 = document.getElementById('namesTable')
+            while (myNode1.firstChild) {
+                myNode1.removeChild(myNode1.firstChild)
+            }
+            let myNode2 = document.getElementById('task')
+            while (myNode2.firstChild) {
+                myNode2.removeChild(myNode2.firstChild)
+            }
+            let myNode3 = document.getElementById('buttons')
+            while (myNode3.firstChild) {
+                myNode3.removeChild(myNode3.firstChild)
+            }
+        }
+
+        async function main(nameTable) {
+            if (nameTable == null) {
+                nameTable = 'Today'
+            }
+            document.cookie = "table=" + nameTable
+            clear()
+            const url = 'main?nameTable=' + nameTable
+            const response = await fetch(url)
+            if (response.ok) {
+                const mainArray = await response.json()
+                document.getElementById('nameTable').innerHTML = nameTable + ' ' + date(nameTable)
+                const namesTable = document.getElementById("namesTable");
+                const tables = mainArray.tables
+                for (let table of tables) {
+                    const a = document.createElement('a')
+                    a.setAttribute('href', '#')
+                    a.onclick = function () {
+                        main(table.name)
+                    }
+                    a.innerHTML = table.name + ' ' + date(table.name)
+                    const td = document.createElement('td')
+                    td.appendChild(a)
+                    namesTable.appendChild(td)
+                }
+
+                const tasks = mainArray.tasks
+                if (tasks == null) {
+                    document.getElementById('there_are_tasks').style.display = 'none'
+                    document.getElementById('no_tasks').style.display = 'block'
+                } else {
+                    document.getElementById('there_are_tasks').style.display = 'block'
+                    document.getElementById('no_tasks').style.display = 'none'
+                    const taskTable = document.getElementById("task");
+                    for (let task of tasks) {
+                        const tr = document.createElement('tr')
+                        const td_checkbox = document.createElement('td')
+                        const td_task = document.createElement('td')
+                        const input = document.createElement('input');
+                        input.setAttribute('type', 'checkbox');
+                        input.setAttribute('name', 'idTask');
+                        input.setAttribute('value', task.id);
+                        td_checkbox.appendChild(input)
+                        td_task.innerHTML = task.task
+                        tr.appendChild(td_checkbox)
+                        tr.appendChild(td_task)
+                        document.getElementById('date').innerHTML = ''
+                        if (nameTable !== 'Today' && nameTable !== 'Tomorrow') {
+                            const td_date = document.createElement('td')
+                            td_date.innerHTML = task.date
+                            tr.appendChild(td_date)
+                            document.getElementById('date').innerHTML = 'Date'
+                        }
+                        taskTable.appendChild(tr)
+                    }
+                }
+
+                const buttonsName = mainArray.buttons
+                const buttons = document.getElementById("buttons");
+                for (let buttonName of buttonsName) {
+                    const td = document.createElement('td')
+                    const button = document.createElement('button')
+                    button.setAttribute('type', 'submit')
+                    button.setAttribute('name', 'button')
+                    button.setAttribute('value', buttonName.name)
+                    button.onclick = function () {
+                        return checkInput()
+                    }
+                    button.innerHTML = buttonName.name
+                    td.appendChild(button)
+                    buttons.appendChild(td)
+                }
+                if (nameTable === 'Today' || nameTable === 'Tomorrow' || nameTable === 'Someday') {
+                    document.getElementById('field').setAttribute('value', nameTable)
+                    document.getElementById('addTask').style.display = 'block'
+                } else {
+                    document.getElementById('addTask').style.display = 'none'
+                }
+            } else {
+                alert("HTTP error: " + response.status);
+            }
+        }
+    </script>
+</head>
+<body onload="start()">
+<div id="registered">
+    <table cellpadding="5">
+        <tr>
+            <td>User:</td>
+            <td id="login"><b></b></td>
+            <td>
+                <form action="logout" method="post">
+                    <button type="submit" name="submit_logout" onclick="CookiesDelete()">
+                        LogOut
+                    </button>
+                </form>
+            </td>
+        </tr>
+    </table>
+</div>
+<div id="not_registered">
+    <table cellpadding="10">
+        <tr>
+            <td>User:</td>
+            <td><b>guest</b></td>
+            <td><a href="loginIn.jsp"> Login </a></td>
+            <td><a href="registrate.jsp">Registrate</a></td>
+        </tr>
+    </table>
+</div>
+<br>
+<p/>
+<hr>
+<table border=0>
+    <tr id="namesTable"></tr>
+</table>
+<h2 id="nameTable"></h2>
+<p/>
+<div id="no_tasks">
+    <p style="color:green;">
+        Add the first task and get started...
+    </p>
+</div>
+<div id="there_are_tasks">
+    <form id="tasks" action="operations" method="post">
+        <table border=0>
+            <thead>
+            <th></th>
+            <th>Task</th>
+            <th id="date"></th>
+            </thead>
+            <tbody id="task">
+            </tbody>
+        </table>
+        <p/>
+        <p id="errMsg" style="color:red;"></p>
+        <table>
+            <tr id="buttons"></tr>
+        </table>
+    </form>
+</div>
+<div id="addTask">
+    <form action="addTask.html" method="post">
+        <input id="field" type="hidden" name="nameTable">
+        <input type="submit" value="Add task">
+    </form>
+</div>
+<hr>
+<br>
+<i>Developed by Antashkou Aliaksandr
+    <ins>antoshkovalexandr@gmail.com</ins>
+</i>
+</body>
+</html>
